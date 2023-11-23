@@ -38,105 +38,105 @@ unique_genes = list(set(final_genes))
 
 def retrieve_uniprot_ids(gene_IDs, csv_path, cont=False):
     columns = ["from", "to"]
-    
+
     final_data = pd.DataFrame(columns=columns)
     ranIDs = []
     uniprot_ids = []
-    
+
     if cont == False:
         for gene in gene_IDs:
-            
-            
+
+
             print(gene)
-            
+
             request = IdMappingClient.submit(
                 source="GeneCards", dest="UniProtKB", ids={gene}
             )
             time.sleep(5)
-            
+
             tmp=pd.DataFrame(list(request.each_result()))
             if len(tmp) != 0:
-                
+
                 ranIDs.append(gene)
-                
+
                 uniprot_ids.append(tmp['to'][0])
-                
+
                 # Create a DataFrame for the current iteration
                 iteration_df = pd.DataFrame({
                     'from': ranIDs,
                     'to': uniprot_ids
                 })
-                
+
                 # Save the DataFrame to a CSV file
                 iteration_df.to_csv(csv_path, index=False)
-                
+
             else:
-                
+
                 ranIDs.append(gene)
-                
+
                 uniprot_ids.append('Not found')
-                
+
                 # Create a DataFrame for the current iteration
                 iteration_df = pd.DataFrame({
                     'from': ranIDs,
                     'to': uniprot_ids
                 })
-                
+
                 # Save the DataFrame to a CSV file
                 iteration_df.to_csv(csv_path, index=False)
-        
+
     if cont == True:
         final_data = pd.read_csv(csv_path)
         #final_data.drop('Unnamed: 0', axis=1)
         ranIDs = list(final_data['from'])
         uniprot_ids = list(final_data['to'])
-        
+
         gene_ID_new = [x for x in gene_IDs if x not in list(final_data['from'])]
         gene_IDs = gene_ID_new
-        
-        
+
+
         for gene in gene_IDs:
-            
-            
+
+
             print(gene)
-            
+
             request = IdMappingClient.submit(
                 source="GeneCards", dest="UniProtKB", ids={gene}
             )
             time.sleep(5)
-            
+
             tmp=pd.DataFrame(list(request.each_result()))
             if len(tmp) != 0:
-                
+
                 ranIDs.append(gene)
-                
+
                 uniprot_ids.append(tmp['to'][0])
-                
+
                 # Create a DataFrame for the current iteration
                 iteration_df = pd.DataFrame({
                     'from': ranIDs,
                     'to': uniprot_ids
                 })
-                
+
                 # Save the DataFrame to a CSV file
                 iteration_df.to_csv(csv_path, index=False)
-                
+
             else:
-                
+
                 ranIDs.append(gene)
-                
+
                 uniprot_ids.append('Not found')
-                
+
                 # Create a DataFrame for the current iteration
                 iteration_df = pd.DataFrame({
                     'from': ranIDs,
                     'to': uniprot_ids
                 })
-                
+
                 # Save the DataFrame to a CSV file
                 iteration_df.to_csv(csv_path, index=False)
-            
-    
+
+
     return 'Finished'
 
 ### Retrieve Uniprot IDs
@@ -152,7 +152,7 @@ to_take = []
 for i in range(len(clinvar)):
     if len(clinvar['Gene(s)'][i].split('|')) == 1:
         to_take.append(i)
-    
+
 
 clinvar_mono = clinvar[clinvar.index.isin(to_take)]
 
@@ -162,7 +162,7 @@ for gene in clinvar_mono['Gene(s)']:
     for i in range(len(cata_IDs)):
         if cata_IDs['from'][i] == gene:
             uniprot_column.append(cata_IDs['to'][i])
-            
+
 
 
 def process_and_fgrep_batch(csv_file, tsv_file, output_dir, batch_size=80):
@@ -237,49 +237,49 @@ protein_changes = list(clinvar_mono['Protein change'])
 
 verify = []
 for i in range(len(uniprot_entries)):
-    
-    
+
+
     gene = uniprot_entries[i]
     mutations = protein_changes[i].split(', ')
-    
+
     try:
         file_path = '/home/lucas/cataract/cataract_AlphaMiss/database/'+gene+'_output.tsv'
         alpha = pd.read_csv(file_path, sep='\t', header=None)
-    
+
         tmp_pheno = []
         tmp_score = []
         tmp_reference_aa = []
-        
+
         scores =  list(alpha[2])
         phenotypes = list(alpha[3])
-        
-        
+
+
         for clin_mut in range(len(mutations)):
             for alpha_mut in range(len(alpha)):
                 if mutations[clin_mut][1:] == alpha[1][alpha_mut][1:]:
-                                        
+
                     tmp_pheno.append(phenotypes[alpha_mut])
                     tmp_score.append(scores[alpha_mut])
-                    
+
                     if mutations[clin_mut] == alpha[1][alpha_mut]:
                         tmp_reference_aa.append('same reference')
                     else:
                         tmp_reference_aa.append('different reference: '+alpha[1][alpha_mut][0])
-                    
-                    
+
+
                 if len(tmp_pheno) != len(tmp_score):
                    print('difference inside'), print(gene), print(mutations[clin_mut])
-                            
-        
+
+
         all_pheno.append(tmp_pheno)
         all_scores.append(tmp_score)
         all_references.append(tmp_reference_aa)
-        
+
         if len(all_pheno) != len(all_scores):
            break
-          
 
-    
+
+
     except FileNotFoundError as e:
         error_message = f"Error: File not found at {file_path}"
         all_pheno.append(error_message)
