@@ -10,7 +10,7 @@ def fetch_canonical_cds_from_transcript(transcript_id):
     server = "https://rest.ensembl.org"
     endpoint = f"/sequence/id/{transcript_id}"
     headers = {"Content-Type": "application/json"}
-    
+
     response = requests.get(server + endpoint, headers=headers, params={"type": "cds"})
     if response.ok:
         sequence_data = response.json()
@@ -23,7 +23,7 @@ def fetch_transcript_id(refseq_id, gene_symbol):
         server = "https://rest.ensembl.org"
         endpoint = f"/xrefs/id/{refseq_id}"
         headers = {"Content-Type": "application/json"}
-        
+
         response = requests.get(server + endpoint, headers=headers)
         if response.ok:
             xrefs_data = response.json()
@@ -37,7 +37,7 @@ def fetch_transcript_id(refseq_id, gene_symbol):
         server = "https://rest.ensembl.org"
         endpoint = f"/lookup/symbol/homo_sapiens/{gene_symbol}?expand=true"
         headers = {"Content-Type": "application/json"}
-        
+
         response = requests.get(server + endpoint, headers=headers)
         if response.ok:
             gene_data = response.json()
@@ -105,20 +105,36 @@ def main():
         print(f"Error: File '{input_file}' not found.")
         sys.exit(1)
 
-    # Load the CSV file
-    df = pd.read_csv(input_file)
+    # Output file path
+    output_file = os.path.join(os.getcwd(), "canonized_clinvar.csv")
+
+    # Load the input CSV file
+    df = pd.read_csv(input_file, sep='\t', engine='python', on_bad_lines='skip')
+
 
     # Add a column for results and initialize with NaN
     df['Canonic mutation'] = pd.NA
 
+    # Check for an existing output file
+    if os.path.exists(output_file):
+        print(f"Resuming from existing output file: {output_file}")
+        df_existing = pd.read_csv(output_file)
+
+        # Align the existing output with the input file
+        df = df.merge(df_existing[['Name', 'Canonic mutation']], on='Name', how='left', suffixes=('', '_existing'))
+        df['Canonic mutation'] = df['Canonic mutation_existing'].combine_first(df['Canonic mutation'])
+        df = df.drop(columns=['Canonic mutation_existing'])
+    else:
+        print("No existing output file found. Starting from the beginning.")
+
     # Total rows for progress tracking
     total_rows = len(df)
 
-    # Output file path
-    output_file = os.path.join(os.getcwd(), "canonized_clinvar.csv")
-
     # Process each mutation and save the entire DataFrame after every query
     for idx in range(total_rows):
+        if pd.notna(df.loc[idx, 'Canonic mutation']):
+            continue  # Skip already processed rows
+
         print(f"Processing {idx + 1}/{total_rows}")
         mutation_info = df.loc[idx, 'Name']
         df.loc[idx, 'Canonic mutation'] = process_mutation(mutation_info)
