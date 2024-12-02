@@ -105,8 +105,9 @@ for label in axes[1].get_xticklabels():
 # Increase margins around the figure
 plt.subplots_adjust(left=0.1, right=0.9, top=0.95, bottom=0.2)
 
-# Show the plots
-plt.show()
+# Save the plots
+plt.savefig('germline_classification_violin_bar_plot.png', dpi=300)
+plt.close()
 
 # New Analysis: Match `AM Class` for `Benign` and `Pathogenic` by `Germline Review Status`
 benign_pathogenic = subset_df[subset_df['Germline Classification'].isin(['Benign', 'Pathogenic'])]
@@ -139,9 +140,9 @@ plt.ylim(0, 100)  # Ensure y-axis covers 0 to 100%
 for index, value in enumerate(rates['Total']):
     plt.text(index, rates['Rate'][index] + 2, f'N={value}', ha='center', fontsize=10)
 
-# Adjust layout and show the plot
-plt.tight_layout()
-plt.show()
+# Save the plot
+plt.savefig('classification_accuracy_rates.png', dpi=300)
+plt.close()
 
 ########################
 ## Confusion matrix
@@ -191,8 +192,10 @@ plt.xlabel('Predicted Labels', fontsize=14)
 plt.ylabel('True Labels', fontsize=14)
 plt.xticks(rotation=45, ha='right', fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
-plt.tight_layout()
-plt.show()
+
+# Save the plot
+plt.savefig('confusion_matrix_expert_panel.png', dpi=300)
+plt.close()
 
 # Filter for discrepancies where AM Class is "Likely Benign" and Ground Truth is "Pathogenic"
 discrepancies = expert_panel[
@@ -204,7 +207,6 @@ discrepancy_details = discrepancies[['Gene', 'Variant', 'AM Class', 'Germline Cl
 
 ########
 ### ROC
-# Filter data for "Pathogenic" and "Benign" ground truth
 # Filter data for "Pathogenic" and "Benign" ground truth
 roc_data = subset_df[subset_df['Germline Classification'].isin(['Benign', 'Pathogenic'])].copy()
 
@@ -252,8 +254,10 @@ plt.xlabel('False Positive Rate (FPR)', fontsize=14)
 plt.ylabel('True Positive Rate (TPR)', fontsize=14)
 plt.legend(fontsize=12)
 plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.show()
+
+# Save the plot
+plt.savefig('roc_curve.png', dpi=300)
+plt.close()
 
 # Print Youden Index and Best Threshold
 print(f"Best Youden Index: {youden_index[best_index]:.2f}")
