@@ -226,13 +226,27 @@ print(f"Best Threshold: {best_threshold:.2f}")
 
 ### By year
 #
-## Cumulative Accuracy by Year of Deposition
+## Accuracy by Year of Deposition (Cumulative Dataset)
 ########################
+
+# Recreate the subset_df with the required columns, including "Germline Date Last Evaluated"
+selected_columns = ['Gene(s)', 'Canonic mutation', 'Germline classification', 
+                    'Germline review status', 'am_class', 'am_pathogenicity', 
+                    'Germline date last evaluated']
+subset_df = data[selected_columns].copy()
+
+# Rename the columns for clarity
+subset_df.columns = ['Gene', 'Variant', 'Germline Classification', 
+                     'Germline Review Status', 'AM Class', 'AM Pathogenicity', 
+                     'Germline Date Last Evaluated']
+
+# Filter data: remove rows with NaN in key columns
+subset_df = subset_df.dropna(subset=['Germline Classification', 'AM Pathogenicity', 'AM Class', 'Germline Review Status', 'Germline Date Last Evaluated'])
 
 # Extract the year from the "Germline Date Last Evaluated" column
 subset_df['Year of Deposition'] = pd.to_datetime(subset_df['Germline Date Last Evaluated'], errors='coerce').dt.year
 
-# Filter data for only Benign and Pathogenic ground truths, and drop rows with NaN in the AM Class column
+# Filter data for only Benign and Pathogenic ground truths
 yearly_data = subset_df[
     subset_df['Germline Classification'].isin(['Benign', 'Pathogenic']) & 
     subset_df['AM Class'].notna()
@@ -275,8 +289,8 @@ plt.figure(figsize=(12, 6))
 plt.plot(cumulative_data['Year of Deposition'], cumulative_data['Accuracy'], marker='o', linestyle='-', color='skyblue')
 
 # Add titles and labels
-plt.title('Cumulative Accuracy by Year of Deposition', fontsize=16)
-plt.xlabel('Cutoff Date of Last Evaluation', fontsize=14)
+plt.title('Accuracy by Year of Deposition (Cumulative Dataset)', fontsize=16)
+plt.xlabel('Year of Deposition', fontsize=14)
 plt.ylabel('Cumulative Accuracy (%)', fontsize=14)
 plt.grid(alpha=0.3)
 
@@ -297,7 +311,49 @@ for index, row in cumulative_data.iterrows():
                  f'N={int(row["Total Variants"])}', ha='center', fontsize=10, color='black')
 
 # Save the plot
-plt.savefig('cumulative_accuracy_by_year_of_deposition.png', dpi=300, bbox_inches='tight')
+plt.savefig('accuracy_by_year_of_deposition.png', dpi=300, bbox_inches='tight')
+
+# Display the plot
+plt.show()
+
+
+########################
+## Accuracy by Germline Review Status
+########################
+
+# Filter data for Benign and Pathogenic ground truths
+benign_pathogenic = subset_df[subset_df['Germline Classification'].isin(['Benign', 'Pathogenic'])]
+
+# Calculate correct predictions
+correct_predictions = benign_pathogenic[
+    ((benign_pathogenic['Germline Classification'] == 'Benign') & (benign_pathogenic['AM Class'] == 'likely_benign')) |
+    ((benign_pathogenic['Germline Classification'] == 'Pathogenic') & (benign_pathogenic['AM Class'] == 'likely_pathogenic'))
+]
+
+# Group by Germline Review Status and calculate rates
+summary = benign_pathogenic.groupby('Germline Review Status').size().reset_index(name='Total')
+correct_summary = correct_predictions.groupby('Germline Review Status').size().reset_index(name='Correct')
+rates = pd.merge(summary, correct_summary, on='Germline Review Status', how='left')
+rates['Correct'] = rates['Correct'].fillna(0).astype(int)  # Fill NaN for no matches
+rates['Accuracy'] = (rates['Correct'] / rates['Total']) * 100  # Calculate accuracy as percentage
+
+# Plot classification accuracy rates by Germline Review Status
+plt.figure(figsize=(12, 6))
+plt.bar(rates['Germline Review Status'], rates['Accuracy'], color='skyblue', alpha=0.8)
+
+# Add titles and labels
+plt.title('Classification Accuracy by Germline Review Status', fontsize=16)
+plt.xlabel('Germline Review Status', fontsize=14)
+plt.ylabel('Accuracy Rate (%)', fontsize=14)
+plt.xticks(rotation=45, ha='right', fontsize=12)
+plt.ylim(0, 100)  # Ensure y-axis covers 0 to 100%
+
+# Add total N of samples above the bars
+for index, value in enumerate(rates['Total']):
+    plt.text(index, rates['Accuracy'][index] + 2, f'N={value}', ha='center', fontsize=10)
+
+# Save the plot
+plt.savefig('accuracy_by_review_status.png', dpi=300, bbox_inches='tight')
 
 # Display the plot
 plt.show()
