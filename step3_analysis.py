@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import auc
 
 # Load the dataset
 data = pd.read_csv("/home/lucas/AlphaMissense_Benchmark/cataract_benchmark/updated_clinvar_alphamiss.csv")
@@ -10,7 +10,7 @@ data = pd.read_csv("/home/lucas/AlphaMissense_Benchmark/cataract_benchmark/updat
 # Select the required columns and create a new DataFrame
 selected_columns = ['Gene(s)', 'Canonic mutation', 'Germline classification', 
                     'Germline review status', 'am_class', 'am_pathogenicity']
-subset_df = data[selected_columns].copy()  # Create a copy to avoid SettingWithCopyWarning
+subset_df = data[selected_columns].copy()
 
 # Rename the columns for clarity
 subset_df.columns = ['Gene', 'Variant', 'Germline Classification', 
@@ -55,7 +55,7 @@ log_freq_data = np.log10(freq_data.replace(0, np.nan))  # Replace 0 with NaN for
 log_freq_data = log_freq_data.replace([np.inf, -np.inf, np.nan], 0)  # Replace inf or NaN with 0
 
 # Create the figure with two subplots
-fig, axes = plt.subplots(2, 1, figsize=(16, 14), gridspec_kw={'height_ratios': [1, 3]})  # Increase width
+fig, axes = plt.subplots(2, 1, figsize=(18, 16), gridspec_kw={'height_ratios': [1, 3]})
 
 # Bar plot for frequencies (log scale with zero for 0 frequencies)
 axes[0].bar(range(len(class_order)), log_freq_data, color='skyblue', alpha=0.8)
@@ -70,23 +70,23 @@ sns.violinplot(
     x='Germline Classification', 
     y='AM Pathogenicity', 
     scale='width',
-    cut=0,  # Prevent KDE from extending beyond data bounds
-    bw_adjust=0.5,  # Reduce smoothing for more realistic representation
+    cut=0,
+    bw_adjust=0.5,
     palette="muted",
     order=class_order,
-    inner=None,  # Remove the inner bar
+    inner=None,
     ax=axes[1]
 )
 
-# Overlay strip plot for individual points (less overlap)
+# Overlay strip plot for individual points
 sns.stripplot(
     data=subset_df, 
     x='Germline Classification', 
     y='AM Pathogenicity', 
-    color='k',  # Black points
-    size=2.5,   # Smaller points
-    alpha=0.5,  # Make points less opaque
-    dodge=True,  # Spread points horizontally
+    color='k', 
+    size=2.5,
+    alpha=0.5,
+    dodge=True,
     order=class_order,
     ax=axes[1]
 )
@@ -94,7 +94,7 @@ sns.stripplot(
 axes[1].set_title('Distribution of AM Pathogenicity by Germline Classification', fontsize=16)
 axes[1].set_xlabel('Germline Classification', fontsize=14)
 axes[1].set_ylabel('AM Pathogenicity', fontsize=14)
-axes[1].set_ylim(-0.1, 1.1)  # Add some space beyond the data bounds
+axes[1].set_ylim(-0.1, 1.1)
 
 # Adjust x-axis labels to be angled
 axes[1].tick_params(axis='x', labelsize=12)
@@ -103,49 +103,14 @@ for label in axes[1].get_xticklabels():
     label.set_horizontalalignment('right')
 
 # Increase margins around the figure
-plt.subplots_adjust(left=0.1, right=0.9, top=0.95, bottom=0.2)
+plt.subplots_adjust(left=0.1, right=0.95, top=0.9, bottom=0.25)
 
 # Save the plots
-plt.savefig('germline_classification_violin_bar_plot.png', dpi=300)
-plt.close()
-
-# New Analysis: Match `AM Class` for `Benign` and `Pathogenic` by `Germline Review Status`
-benign_pathogenic = subset_df[subset_df['Germline Classification'].isin(['Benign', 'Pathogenic'])]
-
-# Calculate correct predictions
-correct_predictions = benign_pathogenic[
-    ((benign_pathogenic['Germline Classification'] == 'Benign') & (benign_pathogenic['AM Class'] == 'likely_benign')) |
-    ((benign_pathogenic['Germline Classification'] == 'Pathogenic') & (benign_pathogenic['AM Class'] == 'likely_pathogenic'))
-]
-
-# Group by Germline Review Status and calculate rates
-summary = benign_pathogenic.groupby('Germline Review Status').size().reset_index(name='Total')
-correct_summary = correct_predictions.groupby('Germline Review Status').size().reset_index(name='Correct')
-rates = pd.merge(summary, correct_summary, on='Germline Review Status', how='left')
-rates['Correct'] = rates['Correct'].fillna(0).astype(int)  # Fill NaN for no matches
-rates['Rate'] = (rates['Correct'] / rates['Total']) * 100  # Calculate rate as percentage
-
-# Plot classification accuracy rates by Germline Review Status
-plt.figure(figsize=(12, 6))
-plt.bar(rates['Germline Review Status'], rates['Rate'], color='skyblue', alpha=0.8)
-
-# Add titles and labels
-plt.title('Classification Accuracy Rates by Germline Review Status', fontsize=16)
-plt.xlabel('Germline Review Status', fontsize=14)
-plt.ylabel('Accuracy Rate (%)', fontsize=14)
-plt.xticks(rotation=45, ha='right', fontsize=12)
-plt.ylim(0, 100)  # Ensure y-axis covers 0 to 100%
-
-# Add total N of samples above the bars
-for index, value in enumerate(rates['Total']):
-    plt.text(index, rates['Rate'][index] + 2, f'N={value}', ha='center', fontsize=10)
-
-# Save the plot
-plt.savefig('classification_accuracy_rates.png', dpi=300)
-plt.close()
+plt.savefig('germline_classification_violin_bar_plot_updated.png', dpi=300, bbox_inches='tight')
+plt.show()
 
 ########################
-## Confusion matrix
+## Confusion Matrix
 ########################
 
 # Filter data for "reviewed by expert panel" and relevant classes
@@ -185,7 +150,7 @@ conf_matrix = pd.crosstab(
 ).reindex(index=true_classes, columns=predicted_classes, fill_value=0)
 
 # Plot the confusion matrix
-plt.figure(figsize=(8, 6))
+plt.figure(figsize=(10, 8))
 sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=predicted_classes, yticklabels=true_classes)
 plt.title('Confusion Matrix for "Reviewed by Expert Panel"', fontsize=16)
 plt.xlabel('Predicted Labels', fontsize=14)
@@ -194,8 +159,12 @@ plt.xticks(rotation=45, ha='right', fontsize=12)
 plt.yticks(rotation=0, fontsize=12)
 
 # Save the plot
-plt.savefig('confusion_matrix_expert_panel.png', dpi=300)
-plt.close()
+plt.savefig('confusion_matrix_expert_panel_updated.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+########################
+## Discrepancy Analysis
+########################
 
 # Filter for discrepancies where AM Class is "Likely Benign" and Ground Truth is "Pathogenic"
 discrepancies = expert_panel[
@@ -204,13 +173,14 @@ discrepancies = expert_panel[
 
 # Select relevant columns for output
 discrepancy_details = discrepancies[['Gene', 'Variant', 'AM Class', 'Germline Classification']]
+print("Discrepancy Details:\n", discrepancy_details)
 
-########
-### ROC
+########################
+## ROC Curve
+########################
+
 # Filter data for "Pathogenic" and "Benign" ground truth
 roc_data = subset_df[subset_df['Germline Classification'].isin(['Benign', 'Pathogenic'])].copy()
-
-# Assign binary labels: 0 for "Benign", 1 for "Pathogenic"
 roc_data['Binary Classification'] = roc_data['Germline Classification'].map({'Benign': 0, 'Pathogenic': 1})
 
 # Extract true labels and prediction scores
@@ -219,27 +189,19 @@ predicted_scores = roc_data['AM Pathogenicity']
 
 # Define custom thresholds at fixed intervals
 custom_thresholds = np.arange(0.0, 1.01, 0.01)  # From 0.0 to 1.0 in steps of 0.01
-
-# Calculate TPR and FPR for each threshold
-tpr = []
-fpr = []
+tpr, fpr = [], []
 
 for threshold in custom_thresholds:
-    # Predict positive (1) for scores >= threshold, negative (0) otherwise
     predicted_classes = (predicted_scores >= threshold).astype(int)
-    
-    tp = np.sum((true_labels == 1) & (predicted_classes == 1))  # True Positives
-    fp = np.sum((true_labels == 0) & (predicted_classes == 1))  # False Positives
-    fn = np.sum((true_labels == 1) & (predicted_classes == 0))  # False Negatives
-    tn = np.sum((true_labels == 0) & (predicted_classes == 0))  # True Negatives
+    tp = np.sum((true_labels == 1) & (predicted_classes == 1))
+    fp = np.sum((true_labels == 0) & (predicted_classes == 1))
+    fn = np.sum((true_labels == 1) & (predicted_classes == 0))
+    tn = np.sum((true_labels == 0) & (predicted_classes == 0))
+    tpr.append(tp / (tp + fn) if (tp + fn) > 0 else 0.0)
+    fpr.append(fp / (fp + tn) if (fp + tn) > 0 else 0.0)
 
-    tpr.append(tp / (tp + fn) if (tp + fn) > 0 else 0.0)  # Sensitivity
-    fpr.append(fp / (fp + tn) if (fp + tn) > 0 else 0.0)  # 1 - Specificity
-
-# Calculate AUC using the custom TPR and FPR
+# Calculate AUC
 roc_auc = auc(fpr, tpr)
-
-# Calculate Youden Index for custom thresholds
 youden_index = np.array(tpr) - np.array(fpr)
 best_index = np.argmax(youden_index)
 best_threshold = custom_thresholds[best_index]
@@ -254,11 +216,88 @@ plt.xlabel('False Positive Rate (FPR)', fontsize=14)
 plt.ylabel('True Positive Rate (TPR)', fontsize=14)
 plt.legend(fontsize=12)
 plt.grid(alpha=0.3)
-
-# Save the plot
-plt.savefig('roc_curve.png', dpi=300)
-plt.close()
+plt.savefig('roc_curve_updated.png', dpi=300, bbox_inches='tight')
+plt.show()
 
 # Print Youden Index and Best Threshold
 print(f"Best Youden Index: {youden_index[best_index]:.2f}")
 print(f"Best Threshold: {best_threshold:.2f}")
+
+
+### By year
+#
+## Cumulative Accuracy by Year of Deposition
+########################
+
+# Extract the year from the "Germline Date Last Evaluated" column
+subset_df['Year of Deposition'] = pd.to_datetime(subset_df['Germline Date Last Evaluated'], errors='coerce').dt.year
+
+# Filter data for only Benign and Pathogenic ground truths, and drop rows with NaN in the AM Class column
+yearly_data = subset_df[
+    subset_df['Germline Classification'].isin(['Benign', 'Pathogenic']) & 
+    subset_df['AM Class'].notna()
+].copy()
+
+# Calculate Correct Predictions
+yearly_data['Correct Prediction'] = (
+    ((yearly_data['Germline Classification'] == 'Benign') & (yearly_data['AM Class'] == 'likely_benign')) |
+    ((yearly_data['Germline Classification'] == 'Pathogenic') & (yearly_data['AM Class'] == 'likely_pathogenic'))
+)
+
+# Initialize cumulative DataFrame
+cumulative_data = pd.DataFrame()
+
+# Process each year to include cumulative data
+for year in sorted(yearly_data['Year of Deposition'].dropna().unique()):
+    # Filter data up to the current year
+    data_up_to_year = yearly_data[yearly_data['Year of Deposition'] <= year]
+    
+    # Calculate total and correct predictions for the cumulative data
+    total_variants = len(data_up_to_year)
+    correct_variants = data_up_to_year['Correct Prediction'].sum()
+    
+    # Calculate accuracy
+    accuracy = (correct_variants / total_variants) * 100 if total_variants > 0 else 0
+    
+    # Append to cumulative DataFrame
+    cumulative_data = pd.concat([cumulative_data, pd.DataFrame({
+        'Year of Deposition': [year],
+        'Total Variants': [total_variants],
+        'Correct Variants': [correct_variants],
+        'Accuracy': [accuracy]
+    })])
+
+# Reset index of the cumulative data
+cumulative_data.reset_index(drop=True, inplace=True)
+
+# Plot cumulative accuracy as a function of year
+plt.figure(figsize=(12, 6))
+plt.plot(cumulative_data['Year of Deposition'], cumulative_data['Accuracy'], marker='o', linestyle='-', color='skyblue')
+
+# Add titles and labels
+plt.title('Cumulative Accuracy by Year of Deposition', fontsize=16)
+plt.xlabel('Cutoff Date of Last Evaluation', fontsize=14)
+plt.ylabel('Cumulative Accuracy (%)', fontsize=14)
+plt.grid(alpha=0.3)
+
+# Add annotations for total variants per year, ensuring spacing and including first and last labels
+spacing = max(len(cumulative_data) // 10, 1)  # Adjust label spacing dynamically
+for index, row in cumulative_data.iterrows():
+    # Adjust placement for first label to ensure it doesn’t go above the plot
+    if index == 0:
+        y_offset = -2  # Move the first label down
+    elif index == len(cumulative_data) - 1:
+        y_offset = 4  # Move the last label slightly higher
+    else:
+        y_offset = 2  # Default offset for other labels
+
+    # Ensure first, last, and spaced labels are shown
+    if index == 0 or index == len(cumulative_data) - 1 or index % spacing == 0:
+        plt.text(row['Year of Deposition'], row['Accuracy'] + y_offset, 
+                 f'N={int(row["Total Variants"])}', ha='center', fontsize=10, color='black')
+
+# Save the plot
+plt.savefig('cumulative_accuracy_by_year_of_deposition.png', dpi=300, bbox_inches='tight')
+
+# Display the plot
+plt.show()
